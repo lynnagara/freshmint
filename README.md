@@ -1,0 +1,1 @@
+Mint some fresh NFTs
