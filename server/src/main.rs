@@ -1,8 +1,8 @@
 use std::env;
-use std::iter::Iterator;
+use std::error::Error as StdError;
 
-use actix_web::{http::{StatusCode}, web, App, Error, HttpResponse, HttpServer, Responder};
 use actix_multipart::{Field, Multipart};
+use actix_web::{http::StatusCode, web, App, Error, HttpResponse, HttpServer, Responder};
 use futures::{StreamExt, TryStreamExt};
 
 async fn index() -> impl Responder {
@@ -26,13 +26,26 @@ async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
     let mut field = payload.try_next().await?.unwrap();
 
     // A multipart/form-data stream has to contain `content_disposition`
-    let _content_disposition = field
+    let content_disposition = field
         .content_disposition()
         .ok_or_else(|| HttpResponse::BadRequest().finish())?;
 
+    let name = content_disposition.get_name().unwrap();
+    if name != "image" {
+        return Ok(HttpResponse::BadRequest().body("Invalid form data"));
+    }
 
-    let chunk = field.next().await.unwrap();
-    println!("{:?}", chunk);
+    let chunk = field.next().await.unwrap()?;
+
+    if chunk.len() > 1000000 {
+        return Ok(HttpResponse::BadRequest().finish());
+    }
+
+    println!("{:?}", chunk.len());
+
+    let mut vec: Vec<web::Bytes> = Vec::new();
+
+    vec.push(chunk);
 
     Ok(HttpResponse::Ok().body("blah"))
 }
@@ -54,7 +67,6 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await
 }
-
 
 #[cfg(test)]
 mod tests {
