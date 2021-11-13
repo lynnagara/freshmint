@@ -1,7 +1,18 @@
 use std::env;
 
-use actix_web::{web,  App, HttpResponse, HttpServer, Responder};
+use actix_web::{http::{StatusCode}, web, App, HttpResponse, HttpServer, Responder};
 
+async fn index() -> impl Responder {
+    HttpResponse::build(StatusCode::OK)
+        .content_type("text/html; charset=utf-8")
+        .body(include_str!("../../client/dist/index.html"))
+}
+
+async fn js_bundle() -> impl Responder {
+    HttpResponse::build(StatusCode::OK)
+        .content_type("application/javascript; charset=utf-8")
+        .body(include_str!("../../client/dist/bundle.js"))
+}
 
 async fn hello() -> impl Responder {
     HttpResponse::Ok().body("gm")
@@ -19,24 +30,24 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(|| {
         App::new()
-        .route("/", web::get().to(hello))
-        .route("/echo", web::post().to(echo))
+            .route("/", web::get().to(index))
+            .route("/bundle.js", web::get().to(js_bundle))
+            .route("/hello", web::get().to(hello))
+            .route("/echo", web::post().to(echo))
     })
     .bind(url)?
     .run()
     .await
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use actix_web::{test, web, App};
 
-
     #[actix_rt::test]
     async fn test_hello() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(hello))).await;
+        let mut app = test::init_service(App::new().route("/hello", web::get().to(hello))).await;
         let req = test::TestRequest::get().to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(test::read_body(resp).await, "gm");
@@ -45,7 +56,10 @@ mod tests {
     #[actix_rt::test]
     async fn test_echo() {
         let mut app = test::init_service(App::new().route("/echo", web::post().to(echo))).await;
-        let req = test::TestRequest::post().set_payload("gm").uri("/echo").to_request();
+        let req = test::TestRequest::post()
+            .set_payload("gm")
+            .uri("/echo")
+            .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(test::read_body(resp).await, "gm");
     }
