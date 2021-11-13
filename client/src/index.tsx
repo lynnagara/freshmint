@@ -10,13 +10,32 @@ const WIDTH = 500;
 const HEIGHT = 500;
 
 function App() {
-  const canvasRef = React.useRef(null);
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+
+
+  function upload(): void {
+    if (canvasRef.current === null) {
+      return;
+    }
+
+    const dataUrl = canvasRef.current.toBlob(function(blob: Blob | null) {
+      if (blob !== null) {
+        client.upload(blob);
+      }
+    });
+    // client.upload(dataUrl);
+  }
 
   return (
     <div>
       <div>Hi, welcome.</div>
       <div>
-        <button onClick={echo}>Call echo</button>
+        <Container width={WIDTH} height={HEIGHT}>
+          <canvas ref={canvasRef} width={WIDTH} height={HEIGHT}></canvas>
+        </Container>
+      </div>
+      <div>
+        <button onClick={upload}>Upload</button>
       </div>
     </div>
   );
@@ -28,8 +47,5 @@ const Container = styled.div`
   height: ${(props: { width: number; height: number }) => props.height}px;
 `;
 
-function echo() {
-  client.echo("test");
-}
 
 ReactDOM.render(<App />, document.getElementById("root"));

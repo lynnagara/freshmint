@@ -1,7 +1,7 @@
 type EchoData = string;
 
 interface Client {
-  echo: (data: string) => Promise<string>;
+  upload: (data: string) => Promise<string>;
 }
 
 function Client() {
@@ -14,10 +14,13 @@ function Client() {
   const url = "http://localhost:8000/"
 
   return {
-    echo: function (data: string) {
-      return fetch(url + "echo", {
+    upload: function (data: Blob) {
+      let formData = new FormData();
+      formData.append('image', data);
+
+      return fetch(url + "upload", {
         method: "POST",
-        body: data,
+        body: formData,
       }).then(console.log);
     },
   };
