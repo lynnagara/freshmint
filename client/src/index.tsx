@@ -18,12 +18,11 @@ function App() {
       return;
     }
 
-    const dataUrl = canvasRef.current.toBlob(function(blob: Blob | null) {
+    canvasRef.current.toBlob(function(blob: Blob | null) {
       if (blob !== null) {
         client.upload(blob);
       }
     });
-    // client.upload(dataUrl);
   }
 
   return (

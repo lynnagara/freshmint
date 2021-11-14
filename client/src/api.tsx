@@ -15,8 +15,12 @@ function Client() {
 
   return {
     upload: function (data: Blob) {
+      const fileFromBlob = new File([data], "image.png", {
+        type: data.type,
+      });
+
       let formData = new FormData();
-      formData.append('image', data);
+      formData.append('image', fileFromBlob);
 
       return fetch(url + "upload", {
         method: "POST",

@@ -1,7 +1,7 @@
 use std::env;
-use std::error::Error as StdError;
+use std::io::Write;
 
-use actix_multipart::{Field, Multipart};
+use actix_multipart::Multipart;
 use actix_web::{http::StatusCode, web, App, Error, HttpResponse, HttpServer, Responder};
 use futures::{StreamExt, TryStreamExt};
 
@@ -35,17 +35,20 @@ async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
         return Ok(HttpResponse::BadRequest().body("Invalid form data"));
     }
 
-    let chunk = field.next().await.unwrap()?;
+    let filepath = format!("/tmp/{}", "test.png");
 
-    if chunk.len() > 1000000 {
-        return Ok(HttpResponse::BadRequest().finish());
+    // File::create is blocking operation, use threadpool
+    let mut f = web::block(|| std::fs::File::create(filepath))
+        .await
+        .unwrap();
+
+    while let Some(chunk) = field.next().await {
+        let data = chunk.unwrap();
+        // filesystem operations are blocking, we have to use threadpool
+        f = web::block(move || f.write_all(&data).map(|_| f))
+            .await
+            .unwrap();
     }
-
-    println!("{:?}", chunk.len());
-
-    let mut vec: Vec<web::Bytes> = Vec::new();
-
-    vec.push(chunk);
 
     Ok(HttpResponse::Ok().body("blah"))
 }
