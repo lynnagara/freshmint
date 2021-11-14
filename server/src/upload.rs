@@ -2,10 +2,14 @@ use std::io::Write;
 use std::path::Path;
 
 use actix_multipart::Multipart;
-use actix_web::{web, Error, HttpResponse, ResponseError};
+use actix_web::{web, Error, HttpResponse};
 use futures::{StreamExt, TryStreamExt};
 use uuid::Uuid;
 use crate::config;
+
+use image::{io::Reader as ImageReader};
+
+
 
 pub async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
     // There should only be one part in the form
@@ -25,12 +29,14 @@ pub async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
 
     let file_id = Uuid::new_v4().to_string();
 
-    let filepath = format!("{}/{}.png", file_storage_path, file_id);
+
+	let filepath = format!("{}/{}.png", file_storage_path, file_id);
 
 	assert!(!Path::exists(Path::new(&filepath)));
 
+    let filepath_copy = filepath.clone();
     // File::create is blocking operation, use threadpool
-    let mut f = web::block(|| std::fs::File::create(filepath))
+    let mut f = web::block(|| std::fs::File::create(filepath_copy))
         .await
         .unwrap();
 
@@ -41,6 +47,18 @@ pub async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
             .await
             .unwrap();
     }
+
+	// Verify it is an image
+	match ImageReader::open(&filepath)?.decode() {
+        Ok(img) => println!("{:?}", img),
+        Err(_err) => {
+            // Delete the image
+            std::fs::remove_file(&filepath).unwrap();
+        }
+    }
+
+
+
 
     Ok(HttpResponse::Ok().body(file_id))
 }
