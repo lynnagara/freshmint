@@ -1,9 +1,10 @@
-use std::env;
 use std::io::Write;
 
 use actix_multipart::Multipart;
 use actix_web::{http::StatusCode, web, App, Error, HttpResponse, HttpServer, Responder};
 use futures::{StreamExt, TryStreamExt};
+
+mod config;
 
 async fn index() -> impl Responder {
     HttpResponse::build(StatusCode::OK)
@@ -35,7 +36,9 @@ async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
         return Ok(HttpResponse::BadRequest().body("Invalid form data"));
     }
 
-    let filepath = format!("/tmp/{}", "test.png");
+    let file_storage_path = config::get_file_storage_path();
+
+    let filepath = format!("{}/{}", file_storage_path, "test.png");
 
     // File::create is blocking operation, use threadpool
     let mut f = web::block(|| std::fs::File::create(filepath))
@@ -55,8 +58,8 @@ async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let host = env::var("HOST").expect("Missing HOST");
-    let port = env::var("PORT").expect("Missing PORT");
+    let host = config::get_host();
+    let port = config::get_port();
     let url = format!("{}:{}", host, port);
 
     HttpServer::new(|| {
