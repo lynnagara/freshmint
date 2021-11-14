@@ -9,5 +9,5 @@ pub fn get_port() -> String {
 }
 
 pub fn get_file_storage_path() -> String {
-    env::var("FILE_STORAGE_PATH").unwrap_or("../".to_string())
+    env::var("FILE_STORAGE_PATH").unwrap_or("../file_storage".to_string())
 }

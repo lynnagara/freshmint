@@ -1,3 +1,4 @@
 .DS_Store
 server/target
+file_storage
 client/node_modules

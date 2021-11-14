@@ -8,6 +8,7 @@ actix-multipart = "0.3"
 actix-web = "3"
 futures = "0.3.5"
 serde = "1"
+uuid = { version = "0.8", features = ["v4"] }
 
 [dev-dependencies]
 actix-rt = "1"

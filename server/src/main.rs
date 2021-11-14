@@ -3,6 +3,7 @@ use std::io::Write;
 use actix_multipart::Multipart;
 use actix_web::{http::StatusCode, web, App, Error, HttpResponse, HttpServer, Responder};
 use futures::{StreamExt, TryStreamExt};
+use uuid::Uuid;
 
 mod config;
 
@@ -38,7 +39,9 @@ async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
 
     let file_storage_path = config::get_file_storage_path();
 
-    let filepath = format!("{}/{}", file_storage_path, "test.png");
+    let file_id = Uuid::new_v4().to_string();
+
+    let filepath = format!("{}/{}.png", file_storage_path, file_id);
 
     // File::create is blocking operation, use threadpool
     let mut f = web::block(|| std::fs::File::create(filepath))
@@ -53,7 +56,7 @@ async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
             .unwrap();
     }
 
-    Ok(HttpResponse::Ok().body("blah"))
+    Ok(HttpResponse::Ok().body(file_id))
 }
 
 #[actix_web::main]
