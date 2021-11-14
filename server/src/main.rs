@@ -1,11 +1,7 @@
-use std::io::Write;
-
-use actix_multipart::Multipart;
-use actix_web::{http::StatusCode, web, App, Error, HttpResponse, HttpServer, Responder};
-use futures::{StreamExt, TryStreamExt};
-use uuid::Uuid;
+use actix_web::{http::StatusCode, web, App, HttpResponse, HttpServer, Responder};
 
 mod config;
+mod upload;
 
 async fn index() -> impl Responder {
     HttpResponse::build(StatusCode::OK)
@@ -23,42 +19,6 @@ async fn hello() -> impl Responder {
     HttpResponse::Ok().body("gm")
 }
 
-async fn upload(mut payload: Multipart) -> Result<HttpResponse, Error> {
-    // There should only be one part in the form
-    let mut field = payload.try_next().await?.unwrap();
-
-    // A multipart/form-data stream has to contain `content_disposition`
-    let content_disposition = field
-        .content_disposition()
-        .ok_or_else(|| HttpResponse::BadRequest().finish())?;
-
-    let name = content_disposition.get_name().unwrap();
-    if name != "image" {
-        return Ok(HttpResponse::BadRequest().body("Invalid form data"));
-    }
-
-    let file_storage_path = config::get_file_storage_path();
-
-    let file_id = Uuid::new_v4().to_string();
-
-    let filepath = format!("{}/{}.png", file_storage_path, file_id);
-
-    // File::create is blocking operation, use threadpool
-    let mut f = web::block(|| std::fs::File::create(filepath))
-        .await
-        .unwrap();
-
-    while let Some(chunk) = field.next().await {
-        let data = chunk.unwrap();
-        // filesystem operations are blocking, we have to use threadpool
-        f = web::block(move || f.write_all(&data).map(|_| f))
-            .await
-            .unwrap();
-    }
-
-    Ok(HttpResponse::Ok().body(file_id))
-}
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let host = config::get_host();
@@ -70,7 +30,7 @@ async fn main() -> std::io::Result<()> {
             .route("/", web::get().to(index))
             .route("/bundle.js", web::get().to(js_bundle))
             .route("/hello", web::get().to(hello))
-            .route("/upload", web::post().to(upload))
+            .route("/upload", web::post().to(upload::upload))
     })
     .bind(url)?
     .run()
