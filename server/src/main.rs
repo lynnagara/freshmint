@@ -1,18 +1,15 @@
-use actix_web::{http::StatusCode, web, App, HttpResponse, HttpServer, Responder};
+use actix_files;
+use actix_web::{web, App, HttpResponse, HttpServer, Responder, Result};
 
 mod config;
 mod upload;
 
-async fn index() -> impl Responder {
-    HttpResponse::build(StatusCode::OK)
-        .content_type("text/html; charset=utf-8")
-        .body(include_str!("../../client/dist/index.html"))
+async fn index() -> Result<actix_files::NamedFile> {
+    Ok(actix_files::NamedFile::open("../client/dist/index.html")?)
 }
 
-async fn js_bundle() -> impl Responder {
-    HttpResponse::build(StatusCode::OK)
-        .content_type("application/javascript; charset=utf-8")
-        .body(include_str!("../../client/dist/bundle.js"))
+async fn js_bundle() -> Result<actix_files::NamedFile> {
+    Ok(actix_files::NamedFile::open("../client/dist/bundle.js")?)
 }
 
 async fn hello() -> impl Responder {
@@ -52,7 +49,8 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_upload() {
-        let mut app = test::init_service(App::new().route("/upload", web::post().to(upload))).await;
+        let mut app =
+            test::init_service(App::new().route("/upload", web::post().to(upload::upload))).await;
         let req = test::TestRequest::post()
             .set_payload("gm")
             .uri("/upload")
